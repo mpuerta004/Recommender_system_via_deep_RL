@@ -59,14 +59,14 @@ class DRRAgent:
         self.buffer = PriorityExperienceReplay(self.replay_memory_size, self.embedding_dim)
         self.epsilon_for_priority = 1e-6
 
-        # ε-탐욕 탐색 하이퍼파라미터 ε-greedy exploration hyperparameter
+        # ε-greedy exploration hyperparameter
         self.epsilon = 1.
         self.epsilon_decay = (self.epsilon - 0.1)/500000
         self.std = 1.5
 
         self.is_test = is_test
 
-        # wandb
+        # wandb -> to track machine learning work.
         self.use_wandb = use_wandb
         if use_wandb:
             wandb.init(project="drr", 
@@ -91,6 +91,7 @@ class DRRAgent:
             y_t[i] = rewards[i] + (1 - dones[i])*(self.discount_factor * q_values[i])
         return y_t
 
+    #para saber el item recomendado esta esto! 
     def recommend_item(self, action, recommended_items, top_k=False, items_ids=None):
         if items_ids == None:
             items_ids = np.array(list(set(i for i in range(self.items_num)) - recommended_items))
@@ -104,9 +105,10 @@ class DRRAgent:
         else:
             item_idx = np.argmax(tf.keras.backend.dot(items_ebs, action))
             return items_ids[item_idx]
-        
+    
+    
     def train(self, max_episode_num, top_k=False, load_model=False):
-        # 타겟 네트워크들 초기화
+        # Initialize target networks
         self.actor.update_target_network()
         self.critic.update_target_network()
 
@@ -215,6 +217,9 @@ class DRRAgent:
                 self.save_model(os.path.join(self.save_model_weight_dir, f'actor_{episode+1}_fixed.h5'),
                                 os.path.join(self.save_model_weight_dir, f'critic_{episode+1}_fixed.h5'))
 
+
+
+    # Save the model!!!!!!!! 
     def save_model(self, actor_path, critic_path):
         self.actor.save_weights(actor_path)
         self.critic.save_weights(critic_path)

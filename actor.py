@@ -36,7 +36,7 @@ class Actor(object):
         self.target_network(np.zeros((1, 3*self.embedding_dim)))
     
     def update_target_network(self):
-        # 소프트 타겟 네트워크 업데이트 soft target network update
+        # soft target network update
         c_theta, t_theta = self.network.get_weights(), self.target_network.get_weights()
         for i in range(len(c_theta)):
             t_theta[i] = self.tau * c_theta[i] + (1 - self.tau) * t_theta[i]

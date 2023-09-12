@@ -25,6 +25,8 @@ if __name__ == "__main__":
     ratings_list = [i.strip().split("::") for i in open(os.path.join(DATA_DIR,'ratings.dat'), 'r').readlines()]
     users_list = [i.strip().split("::") for i in open(os.path.join(DATA_DIR,'users.dat'), 'r').readlines()]
     movies_list = [i.strip().split("::") for i in open(os.path.join(DATA_DIR,'movies.dat'),encoding='latin-1').readlines()]
+    
+    
     ratings_df = pd.DataFrame(ratings_list, columns = ['UserID', 'MovieID', 'Rating', 'Timestamp'], dtype = np.uint32)
     movies_df = pd.DataFrame(movies_list, columns = ['MovieID', 'Title', 'Genres'])
     movies_df['MovieID'] = movies_df['MovieID'].apply(pd.to_numeric)
@@ -33,7 +35,7 @@ if __name__ == "__main__":
     print("Data preprocessing...")
 
     # 영화 id를 영화 제목으로
-    movies_id_to_movies = {movie[0]: movie[1:] for movie in movies_list}
+    movies_id_to_movies = {movie[0]: movie[1:] for movie in movies_list} #PAra la evaluación
     ratings_df = ratings_df.applymap(int)
 
     # 유저별로 본 영화들 순서대로 정리

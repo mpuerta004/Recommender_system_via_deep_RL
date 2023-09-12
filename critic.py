@@ -32,7 +32,7 @@ class Critic(object):
         # MSE
         self.loss = tf.keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
 
-        # 소프트 타겟 네트워크 업데이트 하이퍼파라미터 soft target network update hyperparameter
+# soft target network update hyperparameter soft target network update hyperparameter
         self.tau = tau
 
     def build_networks(self):
