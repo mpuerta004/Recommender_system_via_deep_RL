@@ -37,7 +37,7 @@ class MovieGenreEmbedding(tf.keras.Model):
 #         m_u = self.m_u_merge([x[1], uemb])
 #         return self.m_u_fc(m_u)
 
-
+# TODO! Creo que cuando ponen get_layer es para coger dado el id del item el embedding de este mismo... pero esto habra que asegurarse. 
 class UserMovieEmbedding(tf.keras.Model):
     def __init__(self, len_users, len_movies, embedding_dim):
         super(UserMovieEmbedding, self).__init__()

@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 import os
 import wandb
 
+
+ROOT_DIR = os.getcwd()
+
 class DRRAgent:
     
     def __init__(self, env, users_num, items_num, state_size, is_test=False, use_wandb=False):
@@ -40,19 +43,24 @@ class DRRAgent:
         # self.m_embedding_network = MovieGenreEmbedding(items_num, 19, self.embedding_dim)
         # self.m_embedding_network([np.zeros((1,)),np.zeros((1,))])
         # self.m_embedding_network.load_weights('/home/diominor/Workspace/DRR/save_weights/m_g_model_weights.h5')
-
+        
+        #Inicializacion de todo! 
+        #en la variable self.embedding_network estan los items por id y asi accedes a su representacion en embeddings 
+        # TODO ---- CAMBIAR PARA MI PROBLEMA 
         self.embedding_network = UserMovieEmbedding(users_num, items_num, self.embedding_dim)
         self.embedding_network([np.zeros((1,)),np.zeros((1,))])
         # self.embedding_network = UserMovieEmbedding(users_num, self.embedding_dim)
         # self.embedding_network([np.zeros((1)),np.zeros((1,100))])
-        self.save_model_weight_dir = f"./save_model/trail-{datetime.now().strftime('%Y-%m-%d-%H')}"
+        self.save_model_weight_dir = os.path.join(ROOT_DIR, f"src/Servicio/app/DRL_model_2/save_model/trail-{datetime.now().strftime('%Y-%m-%d-%H')}")
         if not os.path.exists(self.save_model_weight_dir):
-            os.makedirs(os.path.join(self.save_model_weight_dir, 'imagess'))
-        embedding_save_file_dir = './save_weights/user_movie_embedding_case4.h5'
+            os.makedirs(os.path.join(self.save_model_weight_dir, 'images'))
+        embedding_save_file_dir = os.path.join(ROOT_DIR, 'src/Servicio/app/DRL_model_2/save_weights/user_movie_embedding_case4.h5')
         assert os.path.exists(embedding_save_file_dir), f"embedding save file directory: '{embedding_save_file_dir}' is wrong."
         self.embedding_network.load_weights(embedding_save_file_dir)
-
+        # --------- FIN CAMBIAR PARA MI PROBLEMA
+        
         self.srm_ave = DRRAveStateRepresentation(self.embedding_dim)
+        #state_size = cuantos items tenemos en el estado 
         self.srm_ave([np.zeros((1, 100,)),np.zeros((1,state_size, 100))])
 
         # PER
@@ -94,10 +102,13 @@ class DRRAgent:
     #para saber el item recomendado esta esto! 
     def recommend_item(self, action, recommended_items, top_k=False, items_ids=None):
         if items_ids == None:
+            #Lista de los todos los indices menos los que estan en la lista de recommended_items 
             items_ids = np.array(list(set(i for i in range(self.items_num)) - recommended_items))
-
+        
+        #TODO! En vez de tener los items almacenados en una red por ids nosotros tenemos que buscar la representacion de los items. 
         items_ebs = self.embedding_network.get_layer('movie_embedding')(items_ids)
         # items_ebs = self.m_embedding_network.get_layer('movie_embedding')(items_ids)
+
         action = tf.transpose(action, perm=(1,0))
         if top_k:
             item_indice = np.argsort(tf.transpose(tf.keras.backend.dot(items_ebs, action), perm=(1,0)))[0][-top_k:]
@@ -113,7 +124,7 @@ class DRRAgent:
         self.critic.update_target_network()
 
         if load_model:
-            self.load_model("/home/diominor/Workspace/DRR/save_weights/actor_50000.h5", "/home/diominor/Workspace/DRR/save_weights/critic_50000.h5")
+            self.load_model("/recommendersystem/src/Servicio/app/DRL_model_2/save_weights/actor_50000.h5", "/recommendersystem/src/Servicio/app/DRL_model_2/save_weights/critic_50000.h5")
             print('Completely load weights!')
 
         episodic_precision_history = []
@@ -125,6 +136,7 @@ class DRRAgent:
             steps = 0
             q_loss = 0
             mean_action = 0
+            
             # Environment 리셋
             user_id, items_ids, done = self.env.reset()
             # print(f'user_id : {user_id}, rated_items_length:{len(self.env.user_items)}')
@@ -133,8 +145,12 @@ class DRRAgent:
                 
                 # Observe current state & Find action
                 ## Embedding 해주기
+                #---- TODO! esta representación! tambien tahy que cambiarla
                 user_eb = self.embedding_network.get_layer('user_embedding')(np.array(user_id))
                 items_eb = self.embedding_network.get_layer('movie_embedding')(np.array(items_ids))
+                #Items_eb son los ultimos con  interaccion positiva con el usuario! 
+                #------FIN TODO! 
+                
                 # items_eb = self.m_embedding_network.get_layer('movie_embedding')(np.array(items_ids))
                 ## SRM으로 state 출력
                 state = self.srm_ave([np.expand_dims(user_eb, axis=0), np.expand_dims(items_eb, axis=0)])
@@ -157,6 +173,7 @@ class DRRAgent:
                     reward = np.sum(reward)
 
                 # get next_state
+                # TODO! --- con el id obtener la lista de valores representativos... CREO 
                 next_items_eb = self.embedding_network.get_layer('movie_embedding')(np.array(next_items_ids))
                 # next_items_eb = self.m_embedding_network.get_layer('movie_embedding')(np.array(next_items_ids))
                 next_state = self.srm_ave([np.expand_dims(user_eb, axis=0), np.expand_dims(next_items_eb, axis=0)])
@@ -200,7 +217,8 @@ class DRRAgent:
                     correct_count += 1
                 
                 print(f'recommended items : {len(self.env.recommended_items)},  epsilon : {self.epsilon:0.3f}, reward : {reward:+}', end='\r')
-
+                
+                #Cuando puede darte que el done es False...¿? Terminal phase? 
                 if done:
                     print()
                     precision = int(correct_count/steps * 100)
@@ -208,10 +226,11 @@ class DRRAgent:
                     if self.use_wandb:
                         wandb.log({'precision':precision, 'total_reward':episode_reward, 'epsilone': self.epsilon, 'q_loss' : q_loss/steps, 'mean_action' : mean_action/steps})
                     episodic_precision_history.append(precision)
-             
-            if (episode+1)%50 == 0:
+            print((episode+1)%5) 
+            if (episode+1)%5 == 0:
                 plt.plot(episodic_precision_history)
-                plt.savefig(os.path.join(self.save_model_weight_dir, f'images/training_precision_%_top_5.png'))
+                
+                plt.savefig(os.path.join(self.save_model_weight_dir, f"images/training_precision_%_top_5.png"))
 
             if (episode+1)%1000 == 0 or episode == max_episode_num-1:
                 self.save_model(os.path.join(self.save_model_weight_dir, f'actor_{episode+1}_fixed.h5'),
@@ -224,6 +243,9 @@ class DRRAgent:
         self.actor.save_weights(actor_path)
         self.critic.save_weights(critic_path)
         
+    # Load the model!!!!!!!! -> actor y el critic! 
     def load_model(self, actor_path, critic_path):
         self.actor.load_weights(actor_path)
         self.critic.load_weights(critic_path)
+        
+    
